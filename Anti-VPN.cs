@@ -1,4 +1,4 @@
-﻿using BrokeProtocol.API;
+using BrokeProtocol.API;
 using BrokeProtocol.Entities;
 using BrokeProtocol.Utility.Networking;
 using System.Net;
@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
-namespace AntiVPN
+namespace WhiteAdmin
 {
-    internal class AntiVPN
+    internal class AntiVPN : PlayerEvents
     {
         [Target(GameSourceEvent.PlayerInitialize, ExecutionMode.Event)]
         public async void OnEvent(ShPlayer player)
@@ -18,55 +18,54 @@ namespace AntiVPN
 
             if (!IsLocalIpAddress(player.svPlayer.connection.IP))
             {
-                player.svPlayer.SendGameMessage("〔<color=#546eff>Anti-VPN</color>〕 | Checking your connection...");
+                player.svPlayer.SendGameMessage("〔WhiteProject〕 | Проверяем соединение...");
 
                 IpInfo ipInfo = await IpInfoFetcher.CheckIfProxy(player.svPlayer.connection.IP);
 
                 if (ipInfo != null)
                 {
-                    if (ipInfo.Status != "success")
+                    if (ipInfo.status == "success")
                     {
                         try
                         {
-                            if (ipInfo.Proxy || ipInfo.Hosting)
+                            if (ipInfo.proxy == true || ipInfo.hosting == true)
                             {
-                                player.svPlayer.SendGameMessage("〔<color=#546eff>Anti-VPN</color>〕 | You will be kicked for using vpn!");
+                                player.svPlayer.SendGameMessage("〔WhiteProject〕 | Вы исключены за vpn/proxy!");
                                 await Task.Delay(3000);
                                 player.svPlayer.svManager.Disconnect(player.svPlayer.connection, DisconnectTypes.Kicked);
                             }
                             else
                             {
-                                player.svPlayer.SendGameMessage("〔<color=#546eff>Anti-VPN</color>〕 | You passed the check!");
+                                player.svPlayer.SendGameMessage("〔WhiteProject〕 | Вы прошли проверку!");
                             }
                         }
                         catch { }
                     }
-                    else if (ipInfo.Status == "fail")
+                    else if (ipInfo.status == "fail")
                     {
-                        player.svPlayer.SendGameMessage("〔<color=#546eff>Anti-VPN</color>〕 | You passed temporary check due to endpoint error!");
+                        player.svPlayer.SendGameMessage("〔WhiteProject〕 | Произошла ошибка!");
+                        player.svPlayer.svManager.Disconnect(player.svPlayer.connection, DisconnectTypes.Normal);
                     }
                 }
             }
-            else if (IsLocalIpAddress(player.svPlayer.connection.IP) || player.svPlayer.HasPermission("avpn.bypass"))
+            else if (IsLocalIpAddress(player.svPlayer.connection.IP) || player.svPlayer.HasPermission("wa.bypass"))
             {
-                player.svPlayer.SendGameMessage("〔<color=#546eff>Anti-VPN</color>〕 | Bypassed!");
+                player.svPlayer.SendGameMessage("〔WhiteProject〕 | Bypassed!");
             }
         }
 
-        // Class to store information about the IP
         public class IpInfo
         {
-            public string Status;
-            public bool Proxy;
-            public bool Hosting;
+            public string status;
+            public bool proxy;
+            public bool hosting;
         }
 
-        // Class to fetch IP information from an API
         public static class IpInfoFetcher
         {
             public static async Task<IpInfo> CheckIfProxy(string ip)
             {
-                string apiUrl = $"https://thingproxy.freeboard.io/fetch/http://ip-api.com/json/{ip}?fields=query,status,proxy,hosting";
+                string apiUrl = $"https://thingproxy.freeboard.io/fetch/http://ip-api.com/json/{ip}?fields=status,proxy,hosting";
                 using (UnityWebRequest request = UnityWebRequest.Get(apiUrl))
                 {
                     var tcs = new TaskCompletionSource<IpInfo>();
@@ -90,7 +89,6 @@ namespace AntiVPN
             }
         }
 
-        // Check if an IP address is local
         public static bool IsLocalIpAddress(string host)
         {
             try
